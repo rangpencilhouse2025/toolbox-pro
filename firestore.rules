@@ -1,0 +1,181 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - email: string (required)
+    //   - uid: string (required)
+    //   - usageCount: number (required, 0-100)
+    //   - premiumStatus: bool (required)
+    //   - role: string (required, 'user' | 'admin')
+    //   - lastUsedAt: timestamp (optional)
+    //
+    // Collection: settings
+    // Document ID: global
+    // Fields:
+    //   - dailyLimit: number (required)
+    //   - maintenanceMode: bool (optional)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "rangpencilhouse@gmail.com")
+        );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'uid', 'usageCount', 'premiumStatus', 'role']) &&
+             data.email is string &&
+             data.uid is string &&
+             data.usageCount is number && data.usageCount >= 0 &&
+             data.premiumStatus is bool &&
+             data.role in ['user', 'admin'] &&
+             (!('displayName' in data) || data.displayName is string) &&
+             (!('photoURL' in data) || data.photoURL is string) &&
+             (!('bio' in data) || data.bio is string) &&
+             (!('currentPlanId' in data) || data.currentPlanId is string) &&
+             (!('planExpiresAt' in data) || data.planExpiresAt == null || data.planExpiresAt is string) &&
+             (!('isBlocked' in data) || data.isBlocked is bool) &&
+             (!('customDailyLimit' in data) || data.customDailyLimit is number) &&
+             (!('plan' in data) || data.plan in ['free', 'pro', 'premium']) &&
+             (!('expiry' in data) || data.expiry == null || data.expiry is string);
+    }
+
+    function isValidSettings(data) {
+      return data.dailyLimit is number &&
+             data.siteName is string &&
+             data.siteDescription is string &&
+             data.premiumPrice is number &&
+             data.currency is string &&
+             data.razorpayEnabled is bool &&
+             (!('manualPaymentEnabled' in data) || data.manualPaymentEnabled is bool) &&
+             (!('adScriptTop' in data) || data.adScriptTop is string) &&
+             (!('adScriptBottom' in data) || data.adScriptBottom is string) &&
+             (!('razorpayKeyId' in data) || data.razorpayKeyId is string) &&
+             (!('maintenanceMode' in data) || data.maintenanceMode is bool);
+    }
+
+    function isValidTool(data) {
+      return data.id is string &&
+             data.name is string &&
+             data.description is string &&
+             data.icon is string &&
+             data.path is string &&
+             data.isPremium is bool &&
+             data.isActive is bool &&
+             (!('htmlContent' in data) || data.htmlContent is string) &&
+             (!('isCustom' in data) || data.isCustom is bool);
+    }
+
+    function isValidAdSlot(data) {
+      return data.id is string &&
+             data.name is string &&
+             data.script is string &&
+             data.position in ['top', 'bottom', 'middle', 'sidebar', 'tool_top', 'tool_bottom'] &&
+             data.isActive is bool;
+    }
+
+    function isValidPremiumPlan(data) {
+      return data.id is string &&
+             data.name is string &&
+             data.price is number &&
+             data.currency is string &&
+             data.duration in ['daily', 'weekly', 'monthly', 'yearly', 'lifetime', 'custom'] &&
+             data.durationText is string &&
+             data.description is string &&
+             data.features is list &&
+             data.isActive is bool &&
+             (!('isPopular' in data) || data.isPopular is bool) &&
+             (!('paymentLink' in data) || data.paymentLink is string) &&
+             (!('paymentButtonText' in data) || data.paymentButtonText is string);
+    }
+
+    function isValidReview(data) {
+      return data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() > 0 && data.comment.size() < 1000 &&
+             data.createdAt is string &&
+             (!('id' in data) || data.id is string) &&
+             (!('userId' in data) || data.userId is string) &&
+             (!('userPhoto' in data) || data.userPhoto is string) &&
+             (!('adminReply' in data) || data.adminReply is string) &&
+             (!('isFake' in data) || data.isFake is bool) &&
+             (!('isApproved' in data) || data.isApproved is bool);
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      allow create: if isAuthenticated() && isOwner(userId) && 
+                      isValidUser(request.resource.data) &&
+                      request.resource.data.role == 'user' &&
+                      request.resource.data.premiumStatus == false &&
+                      request.resource.data.usageCount == 0;
+
+      allow update: if isAuthenticated() && (
+        isAdmin() || (
+          isOwner(userId) && 
+          isValidUser(request.resource.data) &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.email == resource.data.email &&
+          request.resource.data.uid == resource.data.uid &&
+          request.resource.data.usageCount <= 1000
+        )
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    match /settings/global {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidSettings(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /tools/{toolId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidTool(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /adSlots/{slotId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidAdSlot(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /premiumPlans/{planId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidPremiumPlan(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /hero_slides/{slideId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if (isAuthenticated() && isValidReview(request.resource.data) && request.resource.data.userId == request.auth.uid) || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

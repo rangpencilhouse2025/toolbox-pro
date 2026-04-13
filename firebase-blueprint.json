@@ -1,0 +1,160 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and usage statistics",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "bio": { "type": "string" },
+        "usageCount": { "type": "integer", "description": "Number of tools used today" },
+        "premiumStatus": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "lastUsedAt": { "type": "string", "format": "date-time" },
+        "plan": { "type": "string", "enum": ["free", "pro", "premium"] },
+        "expiry": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "uid", "usageCount", "premiumStatus", "role"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "dailyLimit": { "type": "integer" },
+        "maintenanceMode": { "type": "boolean" },
+        "siteName": { "type": "string" },
+        "siteDescription": { "type": "string" },
+        "premiumPrice": { "type": "number" },
+        "currency": { "type": "string" },
+        "adScriptTop": { "type": "string" },
+        "adScriptBottom": { "type": "string" },
+        "razorpayKeyId": { "type": "string" },
+        "razorpayEnabled": { "type": "boolean" },
+        "manualPaymentEnabled": { "type": "boolean" },
+        "showHeroBanner": { "type": "boolean" },
+        "heroBannerHeight": { "type": "string" },
+        "heroBannerAutoPlay": { "type": "boolean" },
+        "heroBannerInterval": { "type": "integer" },
+        "heroBannerEffect": { "type": "string", "enum": ["fade", "slide"] }
+      },
+      "required": ["dailyLimit", "siteName", "siteDescription", "premiumPrice", "currency", "razorpayEnabled"]
+    },
+    "Tool": {
+      "title": "Tool",
+      "description": "Application tool configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "path": { "type": "string" },
+        "isPremium": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "htmlContent": { "type": "string" },
+        "isCustom": { "type": "boolean" }
+      },
+      "required": ["id", "name", "description", "icon", "path", "isPremium", "isActive"]
+    },
+    "AdSlot": {
+      "title": "AdSlot",
+      "description": "Advertisement slot configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "script": { "type": "string" },
+        "position": { "type": "string", "enum": ["top", "bottom", "middle", "sidebar", "tool_top", "tool_bottom"] },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "script", "position", "isActive"]
+    },
+    "HeroSlide": {
+      "title": "HeroSlide",
+      "description": "Hero banner slide configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "buttonText": { "type": "string" },
+        "buttonLink": { "type": "string" },
+        "order": { "type": "integer" }
+      },
+      "required": ["id", "imageUrl"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "User review and rating",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "adminReply": { "type": "string" },
+        "isFake": { "type": "boolean" },
+        "isApproved": { "type": "boolean" }
+      },
+      "required": ["id", "userName", "rating", "comment", "createdAt"]
+    },
+    "PremiumPlan": {
+      "title": "PremiumPlan",
+      "description": "Membership plan configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "currency": { "type": "string" },
+        "duration": { "type": "string", "enum": ["daily", "weekly", "monthly", "yearly", "lifetime", "custom"] },
+        "durationText": { "type": "string" },
+        "description": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "isActive": { "type": "boolean" },
+        "isPopular": { "type": "boolean" },
+        "paymentLink": { "type": "string" },
+        "paymentButtonText": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "currency", "duration", "durationText", "isActive"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/tools/{toolId}": {
+      "schema": "Tool",
+      "description": "Tool configurations"
+    },
+    "/adSlots/{slotId}": {
+      "schema": "AdSlot",
+      "description": "Ad slot configurations"
+    },
+    "/settings/global": {
+      "schema": "Settings",
+      "description": "Global app settings"
+    },
+    "/hero_slides/{slideId}": {
+      "schema": "HeroSlide",
+      "description": "Hero banner slides"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "User reviews and ratings"
+    },
+    "/premiumPlans/{planId}": {
+      "schema": "PremiumPlan",
+      "description": "Membership plans"
+    }
+  }
+}

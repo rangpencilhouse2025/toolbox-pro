@@ -1,0 +1,7 @@
+{
+  "name": "ToolBox Pro",
+  "description": "A production-ready tools website with image compression, resizing, QR code generation, and AI text generation.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
